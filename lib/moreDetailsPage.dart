@@ -1,6 +1,44 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
-class MoreDetailsPage extends StatelessWidget {
+class MoreDetailsPage extends StatefulWidget {
+  @override
+  _MoreDetailsPageState createState() => _MoreDetailsPageState();
+}
+
+class _MoreDetailsPageState extends State<MoreDetailsPage> {
+  List<dynamic> reviews = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchReviews();
+  }
+
+  Future<void> _fetchReviews() async {
+    try {
+      final response = await http.get(
+        Uri.parse('http://10.0.2.2/myprojectt/get_reviews.php'),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success']) {
+          setState(() {
+            reviews = data['reviews'];
+          });
+        } else {
+          print('Failed to load reviews: ${data['message']}');
+        }
+      } else {
+        print('Failed to load reviews: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error loading reviews: $e');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -129,6 +167,32 @@ class MoreDetailsPage extends StatelessWidget {
                   ),
                 ),
               ),
+              SizedBox(height: 20),
+              Text(
+                'Reviews',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+              SizedBox(height: 10),
+              reviews.isEmpty
+                  ? Center(child: Text('No reviews found', style: TextStyle(color: Colors.white)))
+                  : Column(
+                      children: reviews.map((review) {
+                        return Card(
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(15),
+                          ),
+                          color: Colors.white,
+                          child: ListTile(
+                            title: Text(review['comment']),
+                            subtitle: Text('By: ${review['user_name']} on ${review['created_at']}'),
+                          ),
+                        );
+                      }).toList(),
+                    ),
             ],
           ),
         ),

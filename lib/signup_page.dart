@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'dashboard_page.dart';  // استيراد صفحة لوحة القيادة
-
+import 'package:shared_preferences/shared_preferences.dart';
+import 'login_page.dart';
+import 'dashboard_page.dart';
 class SignUpPage extends StatefulWidget {
   @override
   _SignUpPageState createState() => _SignUpPageState();
@@ -11,33 +12,32 @@ class SignUpPage extends StatefulWidget {
 
 class _SignUpPageState extends State<SignUpPage> {
   final _formKey = GlobalKey<FormBuilderState>();
-  String? _selectedRole;
-  List<String> _roles = ['User', 'Technician', 'Supervisor'];
 
   Future<void> _registerUser(Map<String, dynamic> formData) async {
     try {
+      final Map<String, dynamic> mutableFormData = Map<String, dynamic>.from(formData);
+      mutableFormData['role'] = 'User';
+
       final response = await http.post(
-        Uri.parse('http://10.0.2.2/myproject/api.php'), // استخدم 10.0.2.2 للمحاكي
+        Uri.parse('http://10.0.2.2/myprojectt/api.php'),
+        
         headers: <String, String>{
           'Content-Type': 'application/json',
+          
         },
-        body: jsonEncode(formData),
+        body: jsonEncode(mutableFormData),
+            
       );
 
-      print('Request body: ${jsonEncode(formData)}'); // طباعة البيانات المرسلة
-      print('Response body: ${response.body}'); // طباعة الاستجابة لتتبعها
+      print('Request body: ${jsonEncode(mutableFormData)}');
+      print('Response body: ${response.body}');
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         if (data['success']) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Registration successful!')),
-          );
-          // التوجيه إلى صفحة لوحة القيادة
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => DashboardPage()),
-          );
+          final email = formData['email'];
+          // تحقق من التفعيل وتسجيل الدخول تلقائيًا
+          await _checkActivationAndLogin(email);
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('Registration failed: ${data['message']}')),
@@ -49,11 +49,95 @@ class _SignUpPageState extends State<SignUpPage> {
         );
       }
     } catch (e) {
-      print(e); // طباعة أي خطأ يحدث
+      print(e);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error: $e')),
       );
     }
+  }
+
+Future<void> _checkActivationAndLogin(String email) async {
+  try {
+    final response = await http.post(
+      Uri.parse('http://10.0.2.2/myprojectt/check_email_verification.php'),
+      headers: <String, String>{
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({'email': email}),
+    );
+
+    print('Activation check response: ${response.body}');
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      if (data['flag'] == 1) {
+        // تسجيل الدخول مباشرة بعد التحقق
+        SharedPreferences prefs = await SharedPreferences.getInstance();
+        // تخزين البريد الإلكتروني و user_id في SharedPreferences
+        prefs.setString('user_email', email);
+        prefs.setInt('user_id', data['user_id']); // تأكد من وجود user_id في الاستجابة
+
+        // توجيه المستخدم إلى DashboardPage بعد التحقق من التفعيل
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => DashboardPage()),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Account is not activated yet. Please check your email.')),
+        );
+      }
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error checking activation status')),
+      );
+    }
+  } catch (e) {
+    print(e);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Error: $e')),
+    );
+  }
+}
+
+
+  Future<void> _resendVerificationEmail(String email) async {
+    try {
+      final response = await http.post(
+        Uri.parse('http://10.0.2.2/myprojectt/resend_verification.php'),
+        headers: <String, String>{
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({'email': email}),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success']) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Verification email resent. Please check your inbox.')),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to resend verification email: ${data['message']}')),
+          );
+        }
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Server error: ${response.statusCode}')),
+        );
+      }
+    } catch (e) {
+      print(e);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e')),
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
   }
 
   @override
@@ -178,36 +262,20 @@ class _SignUpPageState extends State<SignUpPage> {
                     obscureText: true,
                   ),
                   SizedBox(height: 20),
-                  FormBuilderDropdown(
-                    name: 'role',
-                    decoration: InputDecoration(
-                      filled: true,
-                      fillColor: Colors.lightBlue[100],
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10.0),
-                      ),
-                    ),
-                    initialValue: 'User',
-                    items: _roles
-                        .map((role) => DropdownMenuItem(
-                              value: role,
-                              child: Text(role),
-                            ))
-                        .toList(),
-                    onChanged: (value) {
-                      setState(() {
-                        _selectedRole = value as String?;
-                      });
-                    },
-                  ),
-                  SizedBox(height: 20),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
                       ElevatedButton(
                         onPressed: () {
                           if (_formKey.currentState?.saveAndValidate() ?? false) {
-                            _registerUser(_formKey.currentState?.value ?? {});
+                            final formData = _formKey.currentState?.value ?? {};
+                            if (formData['password'] != formData['confirm_password']) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Passwords do not match')),
+                              );
+                            } else {
+                              _registerUser(formData);
+                            }
                           }
                         },
                         style: ElevatedButton.styleFrom(

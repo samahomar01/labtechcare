@@ -55,7 +55,10 @@ class TicketHistoryPage extends StatelessWidget {
               children: [
                 Text(
                   'Ticket History',
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.black87),
+                  style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87),
                 ),
                 SizedBox(height: 10),
                 Expanded(
@@ -63,7 +66,8 @@ class TicketHistoryPage extends StatelessWidget {
                     itemCount: history.length,
                     itemBuilder: (context, index) {
                       return ListTile(
-                        leading: Icon(Icons.circle, color: Colors.black87, size: 16),
+                        leading: Icon(Icons.circle,
+                            color: Colors.black87, size: 16),
                         title: Text(
                           history[index]['status']!,
                           style: TextStyle(color: Colors.black87),

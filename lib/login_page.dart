@@ -6,8 +6,13 @@ import 'dashboard_page.dart';
 import 'dashboardt_page.dart'; // صفحة الفني
 import 'dashboards_page.dart'; // صفحة المشرف
 import 'package:shared_preferences/shared_preferences.dart';
+import 'AddReviewPage.dart'; // استيراد صفحة إضافة المراجعات
+class LoginPage extends StatefulWidget {
+  @override
+  _LoginPageState createState() => _LoginPageState();
+}
 
-class LoginPage extends StatelessWidget {
+class _LoginPageState extends State<LoginPage> {
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
 
@@ -17,7 +22,7 @@ class LoginPage extends StatelessWidget {
 
     try {
       final response = await http.post(
-        Uri.parse('http://10.0.2.2/myproject/login.php'),
+        Uri.parse('http://10.0.2.2/myprojectt/login.php'), // تأكد من استخدام البروتوكول الصحيح وعنوان IP للمحاكي
         headers: <String, String>{
           'Content-Type': 'application/json',
         },
@@ -36,9 +41,11 @@ class LoginPage extends StatelessWidget {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         if (data['success']) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Login successful!')),
-          );
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Login successful!')),
+            );
+          }
 
           // حفظ بيانات المستخدم في SharedPreferences
           SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -46,37 +53,45 @@ class LoginPage extends StatelessWidget {
           prefs.setString('user_role', data['user']['role']); // حفظ الدور
 
           // التوجيه إلى الصفحة المناسبة بناءً على الدور
-          if (data['user']['role'] == 'Technician') {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (context) => TechnicianDashboardPage()),
-            );
-          } else if (data['user']['role'] == 'Supervisor') {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (context) => TicketsPage()),
-            );
-          } else {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (context) => DashboardPage()),
-            );
+          if (mounted) {
+            if (data['user']['role'] == 'Technician') {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (context) => TechnicianDashboardPage()),
+              );
+            } else if (data['user']['role'] == 'Supervisor') {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (context) => TicketsPage()),
+              );
+            } else {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (context) => DashboardPage()),
+              );
+            }
           }
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Login failed: ${data['message']}')),
-          );
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Login failed: ${data['message']}')),
+            );
+          }
         }
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Server error: ${response.statusCode}')),
-        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Server error: ${response.statusCode}')),
+          );
+        }
       }
     } catch (e) {
       print(e);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
     }
   }
 

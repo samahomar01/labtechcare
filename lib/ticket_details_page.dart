@@ -4,9 +4,9 @@ import 'dart:convert';
 import 'ticket_history_page.dart';
 
 class TicketDetailsPage extends StatefulWidget {
-  final int ticketId;
+  final int reportId;
 
-  TicketDetailsPage({required this.ticketId});
+  TicketDetailsPage({required this.reportId});
 
   @override
   _TicketDetailsPageState createState() => _TicketDetailsPageState();
@@ -17,6 +17,10 @@ class _TicketDetailsPageState extends State<TicketDetailsPage> {
   String email = '';
   String date = '';
   String description = '';
+  String labName = ''; // متغير لاسم المعمل
+  String physicalLocation = ''; // متغير للموقع الفيزيائي
+  String deviceName = ''; // متغير لاسم الجهاز
+  List<Map<String, String>> history = [];
 
   @override
   void initState() {
@@ -27,12 +31,12 @@ class _TicketDetailsPageState extends State<TicketDetailsPage> {
   Future<void> _fetchTicketDetails() async {
     try {
       final response = await http.post(
-        Uri.parse('http://10.0.2.2/myproject/get_ticket_details.php'),
+        Uri.parse('http://10.0.2.2/myprojectt/get_ticket_details.php'),
         headers: <String, String>{
           'Content-Type': 'application/json',
         },
         body: jsonEncode(<String, dynamic>{
-          'ticket_id': widget.ticketId,
+          'ticket_id': widget.reportId,
         }),
       );
 
@@ -40,10 +44,13 @@ class _TicketDetailsPageState extends State<TicketDetailsPage> {
         final data = jsonDecode(response.body);
         if (data['success']) {
           setState(() {
-            name = data['ticket_details']['name'];
-            email = data['ticket_details']['email'];
-            date = data['ticket_details']['date'];
-            description = data['ticket_details']['description'];
+            name = data['ticket_details']['name'] ?? '';
+            email = data['ticket_details']['email'] ?? '';
+            date = data['ticket_details']['date'] ?? '';
+            description = data['ticket_details']['description'] ?? '';
+            labName = data['ticket_details']['lab_name'] ?? ''; // جلب اسم المعمل
+            physicalLocation = data['ticket_details']['physicalLocation'] ?? ''; // جلب الموقع الفيزيائي
+            deviceName = data['ticket_details']['device_name'] ?? ''; // جلب اسم الجهاز
           });
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -57,6 +64,48 @@ class _TicketDetailsPageState extends State<TicketDetailsPage> {
       }
     } catch (e) {
       print(e);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e')),
+      );
+    }
+  }
+
+  Future<void> _fetchTicketHistory() async {
+    try {
+      final response = await http.post(
+        Uri.parse('http://10.0.2.2/myprojectt/get_report_history.php'), // تأكد من المسار الصحيح
+        headers: <String, String>{
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode(<String, dynamic>{
+          'report_id': widget.reportId, // استخدام reportId
+        }),
+      );
+
+      print('Response Status Code: ${response.statusCode}');
+      print('Response Body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success']) {
+          setState(() {
+            history = List<Map<String, String>>.from(data['history'].map((item) => {
+              'status': item['status'].toString(),
+              'date': item['status_date'].toString(),
+            }));
+          });
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to fetch ticket history: ${data['message']}')),
+          );
+        }
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Server error: ${response.statusCode}')),
+        );
+      }
+    } catch (e) {
+      print('Error: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error: $e')),
       );
@@ -124,7 +173,7 @@ class _TicketDetailsPageState extends State<TicketDetailsPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Ticket #: ${widget.ticketId}',
+                      'Ticket #: ${widget.reportId}', // استخدام reportId
                       style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.black87),
                     ),
                     SizedBox(height: 10),
@@ -140,6 +189,21 @@ class _TicketDetailsPageState extends State<TicketDetailsPage> {
                     SizedBox(height: 5),
                     Text(
                       'Date: $date',
+                      style: TextStyle(fontSize: 18, color: Colors.black54),
+                    ),
+                    SizedBox(height: 20),
+                    Text(
+                      'Lab: $labName', // عرض اسم المعمل
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
+                    ),
+                    SizedBox(height: 5),
+                    Text(
+                      'Location: $physicalLocation', // عرض الموقع الفيزيائي
+                      style: TextStyle(fontSize: 18, color: Colors.black54),
+                    ),
+                    SizedBox(height: 5),
+                    Text(
+                      'Device: $deviceName', // عرض اسم الجهاز
                       style: TextStyle(fontSize: 18, color: Colors.black54),
                     ),
                     SizedBox(height: 20),
@@ -160,17 +224,12 @@ class _TicketDetailsPageState extends State<TicketDetailsPage> {
             Align(
               alignment: Alignment.center,
               child: ElevatedButton(
-                onPressed: () {
+                onPressed: () async {
+                  await _fetchTicketHistory();
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => TicketHistoryPage(
-                        history: [
-                          {'date': '10/10/2023', 'status': 'Issued'},
-                          {'date': '20/10/2023', 'status': 'Assigned to Ahmed'},
-                          {'date': '22/10/2023', 'status': 'Closed'},
-                        ],
-                      ),
+                      builder: (context) => TicketHistoryPage(history: history),
                     ),
                   );
                 },

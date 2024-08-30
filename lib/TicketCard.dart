@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'ticket_details_page.dart';
 
 class TicketCard extends StatelessWidget {
   final String date;
@@ -7,14 +6,19 @@ class TicketCard extends StatelessWidget {
   final String status;
   final String issue;
   final int ticketId;
+  final Function(String)? onDetailsPressed;
+  final Function(String)? onReplyPressed;
 
-  TicketCard({
+  const TicketCard({
+    Key? key,
     required this.date,
     required this.ticketNumber,
     required this.status,
     required this.issue,
     required this.ticketId,
-  });
+    this.onDetailsPressed,
+    this.onReplyPressed,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -51,19 +55,16 @@ class TicketCard extends StatelessWidget {
           ),
           PopupMenuButton<String>(
             onSelected: (value) {
-              if (value == 'details') {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => TicketDetailsPage(ticketId: ticketId),
-                  ),
-                );
+              if (value == 'details' && onDetailsPressed != null) {
+                onDetailsPressed!('details');
+              } else if (value == 'reply' && onReplyPressed != null) {
+                onReplyPressed!('reply');
               }
             },
             itemBuilder: (BuildContext context) {
-              return {'Details'}.map((String choice) {
+              return {'Details', 'Reply'}.map((String choice) {
                 return PopupMenuItem<String>(
-                  value: 'details',
+                  value: choice.toLowerCase(),
                   child: Text(choice),
                 );
               }).toList();

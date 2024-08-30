@@ -7,6 +7,7 @@ class TicketCard extends StatelessWidget {
   final String issue;
   final int ticketId;
   final Function(String)? onDetailsPressed;
+  final Function(String)? onReplyPressed;
 
   const TicketCard({
     Key? key,
@@ -16,6 +17,7 @@ class TicketCard extends StatelessWidget {
     required this.issue,
     required this.ticketId,
     this.onDetailsPressed,
+    this.onReplyPressed,
   }) : super(key: key);
 
   @override
@@ -55,12 +57,14 @@ class TicketCard extends StatelessWidget {
             onSelected: (value) {
               if (value == 'details' && onDetailsPressed != null) {
                 onDetailsPressed!('details');
+              } else if (value == 'reply' && onReplyPressed != null) {
+                onReplyPressed!('reply');
               }
             },
             itemBuilder: (BuildContext context) {
-              return {'Details'}.map((String choice) {
+              return {'Details', 'Reply'}.map((String choice) {
                 return PopupMenuItem<String>(
-                  value: 'details',
+                  value: choice.toLowerCase(),
                   child: Text(choice),
                 );
               }).toList();

@@ -1,25 +1,116 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
-class NotificationsPage extends StatelessWidget {
+class NotificationsPage extends StatefulWidget {
+  final int userId;
+
+  NotificationsPage({required this.userId});
+
+  @override
+  _NotificationsPageState createState() => _NotificationsPageState();
+}
+
+class _NotificationsPageState extends State<NotificationsPage> {
+  List notifications = [];
+
+  @override
+  void initState() {
+    super.initState();
+    updateNotificationsStatus();
+    fetchNotifications();
+  }
+
+  Future<void> updateNotificationsStatus() async {
+    try {
+      final response = await http.post(
+        Uri.parse('http://10.0.2.2/myprojectt/update_notifications_status.php'),
+        headers: <String, String>{
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode(<String, int>{
+          'user_id': widget.userId,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success']) {
+          print('Notifications updated successfully');
+        } else {
+          print('Failed to update notifications status: ${data['message']}');
+        }
+      } else {
+        print('Server error: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Failed to update notifications status: $e');
+    }
+  }
+
+  Future<void> fetchNotifications() async {
+    final response = await http.post(
+      Uri.parse('http://10.0.2.2/myprojectt/get_notificationsph.php'),
+      headers: <String, String>{
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode(<String, int>{
+        'user_id': widget.userId,
+      }),
+    );
+
+    final responseBody = response.body;
+    final statusCode = response.statusCode;
+    print('Response Status Code: $statusCode'); // طباعة كود الحالة للاستجابة
+    print('Response Body: $responseBody'); // طباعة استجابة الخادم
+
+    if (statusCode == 200) {
+      try {
+        final data = jsonDecode(responseBody);
+        print('Response Data: $data'); // طباعة البيانات المستلمة
+
+        if (data is Map<String, dynamic> && data['success']) {
+          setState(() {
+            notifications = data['notifications'];
+            print('Notifications: $notifications'); // طباعة الإشعارات بعد التحديث
+          });
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to fetch notifications: ${data['message']}')),
+          );
+        }
+      } catch (e) {
+        print('JSON Decode Error: $e'); // طباعة خطأ التحليل
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to parse response')),
+        );
+      }
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Server error: $statusCode')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: PreferredSize(
-        preferredSize: Size.fromHeight(100.0), // تعيين ارتفاع الـ AppBar
+        preferredSize: Size.fromHeight(100.0), // ضبط ارتفاع AppBar
         child: AppBar(
           title: Padding(
-            padding: const EdgeInsets.only(top: 10.0), // إضافة المسافة من الأعلى
+            padding: const EdgeInsets.only(top: 10.0),
             child: Row(
               children: [
                 IconButton(
-                  icon: Icon(Icons.arrow_back, color: Colors.white), // تغيير لون السهم إلى الأبيض
+                  icon: Icon(Icons.arrow_back, color: Colors.white),
                   onPressed: () {
-                    Navigator.pop(context); // تعيد المستخدم إلى الصفحة السابقة
+                    Navigator.pop(context, true);
                   },
                 ),
                 ClipOval(
                   child: Image.asset(
-                    'assets/images/saa.png', // تأكد من تطابق المسار مع صورة الشعار
+                    'assets/images/saa.png',
                     width: 40,
                     height: 40,
                     fit: BoxFit.cover,
@@ -27,53 +118,29 @@ class NotificationsPage extends StatelessWidget {
                 ),
                 SizedBox(width: 10),
                 Text(
-                  'LabTechCare',
-                  style: TextStyle(color: Colors.white, fontSize: 22), // لون النص الأبيض وحجم النص
+                  'Notifications',
+                  style: TextStyle(color: Colors.white, fontSize: 22),
                 ),
               ],
             ),
           ),
-          backgroundColor: Color.fromARGB(255, 36, 117, 154), // لون خلفية شريط العنوان
+          backgroundColor: Color(0xFF0288D1), // لون أزرق فاتح
         ),
       ),
-      backgroundColor: Color.fromARGB(255, 251, 251, 251), // لون خلفية الصفحة
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SizedBox(height: 20),
-            Text(
-              'New Notifications',
-              style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-                color: Color.fromRGBO(0, 0, 0, 0.867),
-              ),
+      body: notifications.isEmpty
+          ? Center(child: Text('No notifications found'))
+          : ListView.builder(
+              itemCount: notifications.length,
+              itemBuilder: (context, index) {
+                final notification = notifications[index];
+                print('Notification: $notification'); // طباعة كل إشعار
+                return NotificationCard(
+                  ticketNumber: notification['ticket_id'].toString(),
+                  description: notification['message'],
+                  notificationDate: notification['created_at'],
+                );
+              },
             ),
-            SizedBox(height: 20),
-            Expanded(
-              child: ListView(
-                children: [
-                  NotificationCard(
-                    ticketNumber: '12345',
-                    description: 'New ticket has been assigned to device number 8 in Lab number 1.',
-                    notificationDate: '2024-05-20',
-                    date: '2 hours ago',
-                  ),
-                  NotificationCard(
-                    ticketNumber: '12346',
-                    description: 'The maintenance of device number 8 in Lab number 1 has been successfully completed.',
-                    notificationDate: '2024-05-21',
-                    date: '1 hour ago',
-                  ),
-                  // أضف المزيد من البطاقات هنا
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }
@@ -82,13 +149,11 @@ class NotificationCard extends StatelessWidget {
   final String ticketNumber;
   final String description;
   final String notificationDate;
-  final String date;
 
   NotificationCard({
     required this.ticketNumber,
     required this.description,
     required this.notificationDate,
-    required this.date,
   });
 
   @override
@@ -113,74 +178,9 @@ class NotificationCard extends StatelessWidget {
             ),
           ],
         ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SizedBox(height: 5),
-            Text(
-              description,
-              style: TextStyle(color: Colors.black54),
-            ),
-            SizedBox(height: 5),
-            Align(
-              alignment: Alignment.bottomRight,
-              child: Text(
-                date,
-                style: TextStyle(color: Colors.black54, fontSize: 12),
-              ),
-            ),
-          ],
-        ),
-        trailing: PopupMenuButton<String>(
-          icon: Icon(Icons.more_vert, color: Colors.black87),
-          onSelected: (value) {
-            // أضف منطق القائمة هنا
-            switch (value) {
-              case 'remove':
-                // منطق إزالة الإشعار
-                break;
-              case 'turn_off':
-                // منطق إيقاف الإشعارات
-                break;
-              case 'turn_on':
-                // منطق تشغيل الإشعارات
-                break;
-            }
-          },
-          itemBuilder: (BuildContext context) {
-            return [
-              PopupMenuItem(
-                value: 'remove',
-                child: Row(
-                  children: [
-                    Icon(Icons.delete, color: Colors.black),
-                    SizedBox(width: 8),
-                    Text('Remove this notification'),
-                  ],
-                ),
-              ),
-              PopupMenuItem(
-                value: 'turn_off',
-                child: Row(
-                  children: [
-                    Icon(Icons.notifications_off, color: Colors.black),
-                    SizedBox(width: 8),
-                    Text('Turn off notification'),
-                  ],
-                ),
-              ),
-              PopupMenuItem(
-                value: 'turn_on',
-                child: Row(
-                  children: [
-                    Icon(Icons.notifications, color: Colors.black),
-                    SizedBox(width: 8),
-                    Text('Turn on notification'),
-                  ],
-                ),
-              ),
-            ];
-          },
+        subtitle: Text(
+          description,
+          style: TextStyle(color: Colors.black54),
         ),
       ),
     );

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'dashboard_page.dart'; // تأكد من استيراد صفحة Dashboard
+import 'dashboard_page.dart'; 
 
 class IssueTicketPage extends StatefulWidget {
   @override
@@ -11,7 +11,7 @@ class IssueTicketPage extends StatefulWidget {
 
 class _IssueTicketPageState extends State<IssueTicketPage> {
   final TextEditingController _detailsController = TextEditingController();
-  final String _state = 'open'; // حالة التذكرة الافتراضية
+  final String _state = 'open'; 
 
   Future<void> _submitIssue() async {
     final details = _detailsController.text;
@@ -28,7 +28,7 @@ class _IssueTicketPageState extends State<IssueTicketPage> {
 
     try {
       final response = await http.post(
-        Uri.parse('http://10.0.2.2/myproject/report_issue.php'), // استخدم 10.0.2.2 للمحاكي
+        Uri.parse('http://10.0.2.2/myprojectt/report_issue.php'), // استخدم 10.0.2.2 للمحاكي
         headers: <String, String>{
           'Content-Type': 'application/json',
         },
@@ -53,13 +53,7 @@ class _IssueTicketPageState extends State<IssueTicketPage> {
             SnackBar(content: Text('Issue reported successfully!')),
           );
           _detailsController.clear(); // مسح الحقول بعد الإرسال الناجح
-          // إعادة التوجيه إلى صفحة DashboardPage بعد ثانيتين
-          Future.delayed(Duration(seconds: 2), () {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (context) => DashboardPage()),
-            );
-          });
+          Navigator.pop(context, true); // تمرير true عند النجاح
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('Report failed: ${data['message']}')),
@@ -91,7 +85,7 @@ class _IssueTicketPageState extends State<IssueTicketPage> {
                 IconButton(
                   icon: Icon(Icons.arrow_back, color: Colors.white), // تغيير لون السهم إلى الأبيض
                   onPressed: () {
-                    Navigator.pop(context); // تعيد المستخدم إلى الصفحة السابقة
+                    Navigator.pop(context, false); // تمرير false عند الإلغاء
                   },
                 ),
                 ClipOval(
@@ -178,10 +172,7 @@ class _IssueTicketPageState extends State<IssueTicketPage> {
                 ),
                 ElevatedButton(
                   onPressed: () {
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(builder: (context) => DashboardPage()),
-                    );
+                    Navigator.pop(context, false); // تمرير false عند الإلغاء
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Color.fromARGB(255, 130, 126, 126),
@@ -191,7 +182,7 @@ class _IssueTicketPageState extends State<IssueTicketPage> {
                       borderRadius: BorderRadius.circular(20),
                     ),
                   ),
-                  child: Text('Reset'),
+                  child: Text('Cancel'),
                 ),
               ],
             ),
